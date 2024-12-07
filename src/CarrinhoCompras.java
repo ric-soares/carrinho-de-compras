@@ -2,6 +2,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 
 
 /**
@@ -21,54 +22,43 @@ public class CarrinhoCompras {
      *
      * Devem ser lançadas subclasses de RuntimeException caso não seja possível adicionar o item ao carrinho de compras.
      *
-     * @param produto
-     * @param valorUnitario
-     * @param quantidade
+     * @param produto nãa pode ser nulo.
+     * @param valorUnitario não pode ser nulo.
+     * @param quantidade deve ser maior que zero.
+     * @throws QuantidadeInvalidaException se a quantidade for menor que zero.
      */
     public void adicionarItem(Produto produto, BigDecimal valorUnitario, int quantidade) {
+        Objects.requireNonNull(produto, "Produto não pode ser nulo");
+        Objects.requireNonNull(valorUnitario, "Valor unitário não pode ser nulo");
 
-        if (quantidade < 0) {
+        if (quantidade <= 0) {
             throw new QuantidadeInvalidaException("Quantidade inválida: " + quantidade);
         }
 
-        boolean itemExistente = false;
-
-        for (int i = 0; i < itensCarrinho.size(); i++) {
-            Item item = itensCarrinho.get(i);
-            if (item.getProduto().getCodigo().equals(produto.getCodigo())) {
-                item.setQuantidade(item.getQuantidade() + quantidade);
-
-                if (item.getValorUnitario() != valorUnitario) {
-                    item.setValorUnitario(valorUnitario);
-                }
-
-                itemExistente = true;
-            }
-        }
-
-        if (!itemExistente) {
-            itensCarrinho.add(new Item(produto, valorUnitario, quantidade));
-        }
+        itensCarrinho.stream()
+                .filter(item -> item.getProduto().getCodigo().equals(produto.getCodigo()))
+                .findFirst()
+                .ifPresentOrElse(item -> {
+                    item.setQuantidade(item.getQuantidade() + quantidade);
+                    if (!Objects.equals(item.getValorUnitario(), valorUnitario)) {
+                        item.setValorUnitario(valorUnitario);
+                    }
+                }, () -> itensCarrinho.add(new Item(produto, valorUnitario, quantidade)));
     }
 
     /**
      * Permite a remoção do item que representa este produto do carrinho de compras.
      *
-     * @param produto
-     * @return Retorna um boolean, tendo o valor true caso o produto exista no carrinho de compras e false
-     * caso o produto não exista no carrinho.
+     * @param produto o produto a ser removido
+     * @return true se o produto foi encontrado e removido, false caso contrário
+     * @throws NullPointerException se o produto for nulo
      */
     public boolean removerItem(Produto produto) {
+        Objects.requireNonNull(produto, "Produto não pode ser nulo");
 
-        for (int i = 0; i < itensCarrinho.size(); i++) {
-            Item item = itensCarrinho.get(i);
-            if (item.getProduto().getCodigo().equals(produto.getCodigo())) {
-                itensCarrinho.remove(i);
-                return true;
-            }
-        }
-
-        return false;
+        return itensCarrinho.removeIf(
+                item -> item.getProduto().getCodigo().equals(produto.getCodigo())
+        );
     }
 
     /**
@@ -76,18 +66,17 @@ public class CarrinhoCompras {
      * Essa posição deve ser determinada pela ordem de inclusão do produto na
      * coleção, em que zero representa o primeiro item.
      *
-     * @param posicaoItem
-     * @return Retorna um boolean, tendo o valor true caso o produto exista no carrinho de compras e false
-     * caso o produto não exista no carrinho.
+     * @param posicaoItem a posição do item na lista
+     * @return true se o item foi removido com sucesso
+     * @throws IllegalArgumentException se a posição for inválida
      */
     public boolean removerItem(int posicaoItem) {
-
-        if (posicaoItem > 0 && posicaoItem <= itensCarrinho.size()) {
+        if (posicaoItem >= 0 && posicaoItem < itensCarrinho.size()) {
             itensCarrinho.remove(posicaoItem);
             return true;
+        } else {
+            throw new IllegalArgumentException("Posição do item inválida");
         }
-
-        return false;
     }
 
     /**
@@ -97,22 +86,18 @@ public class CarrinhoCompras {
      * @return BigDecimal
      */
     public BigDecimal getValorTotal() {
-        BigDecimal valorTotalCarrinho = BigDecimal.ZERO;
-
-        for (Item item : itensCarrinho) {
-            valorTotalCarrinho = valorTotalCarrinho.add(item.getValorTotal());
-        }
-
-        return valorTotalCarrinho;
+        return itensCarrinho.stream()
+                .map(Item::getValorTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     /**
      * Retorna a lista de itens do carrinho de compras.
      *
-     * @return itens
+     * @return uma cópia da lista de itens
      */
     public Collection<Item> getItens() {
-        return itensCarrinho;
+        return new ArrayList<>(itensCarrinho);
     }
 
     public static class QuantidadeInvalidaException extends RuntimeException {

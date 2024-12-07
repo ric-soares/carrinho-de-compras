@@ -13,8 +13,7 @@ public class CarrinhoComprasFactory {
 
     HashMap<String, CarrinhoCompras> tabelaCarrinhoPorCliente = new HashMap<>();
 
-    public CarrinhoComprasFactory() {
-    }
+    public CarrinhoComprasFactory() {}
 
     /**
      * Cria e retorna um novo carrinho de compras para o cliente passado como parâmetro.
@@ -44,21 +43,17 @@ public class CarrinhoComprasFactory {
      * @return BigDecimal
      */
     public BigDecimal getValorTicketMedio() {
+        BigDecimal soma = tabelaCarrinhoPorCliente.values().stream()
+                .map(CarrinhoCompras::getValorTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        BigDecimal soma = BigDecimal.ZERO;
+        long qtdCarrinhos = tabelaCarrinhoPorCliente.size();
 
-        for (String cliente : tabelaCarrinhoPorCliente.keySet()) {
-            soma = soma.add(tabelaCarrinhoPorCliente.get(cliente).getValorTotal());
+        if (qtdCarrinhos > 0) {
+            return soma.divide(BigDecimal.valueOf(qtdCarrinhos), 2, RoundingMode.HALF_UP);
         }
 
-        BigDecimal ticketMedio = BigDecimal.ZERO;
-
-        if (!tabelaCarrinhoPorCliente.isEmpty()) {
-            ticketMedio = soma.divide(BigDecimal.valueOf(tabelaCarrinhoPorCliente.size()), 2, RoundingMode.HALF_UP);
-        }
-
-        return ticketMedio;
-
+        return BigDecimal.ZERO;
     }
 
     /**
